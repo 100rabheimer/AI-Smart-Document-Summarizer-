@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.redis import redis_client
-from app.routers import health, auth
+from app.routers import health, auth, documents, chat
 
 settings = get_settings()
 
@@ -39,6 +39,8 @@ app.add_middleware(
 # Register routers
 app.include_router(health.router, prefix="/api/v1")
 app.include_router(auth.router, prefix="/api/v1")
+app.include_router(documents.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
 # Root health probe convenience route
 app.include_router(health.router)
 

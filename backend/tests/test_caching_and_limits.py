@@ -69,10 +69,10 @@ async def test_sliding_window_rate_limiter_allowed():
     # pipeline() is a sync call returning the async context manager
     mock_redis.pipeline = MagicMock(return_value=mock_pipeline)
 
-    limiter = RateLimiter(max_requests=10, window_seconds=60)
+    limiter = RateLimiter(max_requests=10, window_seconds=60, redis=mock_redis)
     mock_request = Request({"type": "http", "headers": [], "path": "/api/v1/conversations/1/messages"})
 
-    allowed = await limiter(request=mock_request, client=mock_redis)
+    allowed = await limiter(request=mock_request)
     assert allowed is True
 
 
@@ -88,11 +88,11 @@ async def test_sliding_window_rate_limiter_exceeded():
     # pipeline() is a sync call returning the async context manager
     mock_redis.pipeline = MagicMock(return_value=mock_pipeline)
 
-    limiter = RateLimiter(max_requests=10, window_seconds=60)
+    limiter = RateLimiter(max_requests=10, window_seconds=60, redis=mock_redis)
     mock_request = Request({"type": "http", "headers": [], "path": "/api/v1/conversations/1/messages"})
 
     with pytest.raises(HTTPException) as exc_info:
-        await limiter(request=mock_request, client=mock_redis)
+        await limiter(request=mock_request)
 
     assert exc_info.value.status_code == status.HTTP_429_TOO_MANY_REQUESTS
     assert "Retry-After" in exc_info.value.headers

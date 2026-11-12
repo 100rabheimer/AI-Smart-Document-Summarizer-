@@ -16,18 +16,19 @@ class RateLimiter:
         self,
         max_requests: int,
         window_seconds: int,
-        key_prefix: str = "rate_limit"
+        key_prefix: str = "rate_limit",
+        redis: Optional[Redis] = None,
     ):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
         self.key_prefix = key_prefix
+        self.redis = redis
 
     async def __call__(
         self,
         request: Request,
-        client: Optional[Redis] = None
     ) -> bool:
-        r = client or redis_client
+        r = self.redis or redis_client
 
         # Identify client: Prefer authenticated user_id, fallback to client IP
         user = getattr(request.state, "user", None)
