@@ -1,35 +1,29 @@
 # DocMind - Development Log
 
-## Status: Phase 2 (Authentication & Multi-Tenancy) COMPLETED ✅
+## Status: Phase 3 (Caching, Rate Limiting & Idempotency) COMPLETED ✅
 
 ---
 
-### [2026-11-13] - Milestone: Phase 2 - Google OAuth 2.0 & Multi-Tenancy Completed
+### [2026-11-13] - Milestone: Phase 3 - Redis Caching, Invalidation & Limiting Completed
 
 #### Completed:
-1. **Google OAuth 2.0 Flow**:
-   - `backend/app/schemas/auth.py`: Pydantic validation for `UserRead`, `GoogleAuthURLResponse`, and `AuthStatusResponse`.
-   - `backend/app/repositories/user_repo.py`: Atomic user upsert (`email`, `name`, `avatar_url`) and session lifecycle management (`create_session`, `get_active_session`, `revoke_session`).
-   - `backend/app/services/auth_service.py`: Google authorization URL generation with CSRF state token, authorization code exchange with Google, and cryptographic session token generation (raw 32-byte token in HTTP-only cookie, SHA-256 hash stored in DB).
-   - `backend/app/core/dependencies.py`: Created `get_current_user` FastAPI dependency enforcing multi-tenancy isolation and session vitality.
-   - `backend/app/routers/auth.py`:
-     - `GET /api/v1/auth/login/google`: Returns Google consent screen URL.
-     - `GET /api/v1/auth/callback/google`: Completes code exchange, provisions user, sets secure HTTP-only cookie, and redirects to frontend.
-     - `GET /api/v1/auth/me`: Returns current authenticated user profile.
-     - `POST /api/v1/auth/logout`: Revokes session in DB and deletes cookie.
-2. **Automated Test Suite**:
-   - `backend/tests/test_auth.py`: Tested token hashing determinism, Google URL parameters, login endpoint, unauthorized 401 rejection, authenticated user retrieval, and session logout.
-   - **9/9 tests passed (100% green)** across all backend test suites.
-3. **Frontend Client Integration**:
-   - Added `User` interface in `frontend/src/types/index.ts`.
-   - Created "Sign in with Google" button, user profile avatar, and sign-out handler in `Header.tsx`.
-   - Built welcome tenant banner in `App.tsx`.
-   - `npm run build` passed with 0 TypeScript errors.
+1. **Redis Caching & O(1) Invalidation**:
+   - `backend/app/core/cache.py`: Built `CacheService` with query normalization, SHA-256 query hashing, and $O(1)$ tenant-scoped document version cache invalidation (`docs_version`).
+2. **Sliding-Window Rate Limiter**:
+   - `backend/app/core/rate_limiter.py`: Built sliding-window rate limiter powered by Redis Sorted Sets (`ZSET`), protecting against boundary bursts and returning HTTP 429 with `Retry-After`. Configured limiters for Chat (20/min), Uploads (10/min), and General API (120/min).
+3. **Request Idempotency Service**:
+   - `backend/app/core/idempotency.py`: Implemented two-tiered idempotency tracking (Fast-path in Redis with 24h TTL, durable backup in PostgreSQL `idempotency_keys` table).
+4. **Testing Suite & Verification**:
+   - `backend/tests/test_caching_and_limits.py`: Tested query normalization, version invalidation, allowed/exceeded sliding window states, and response replay.
+   - **All 14 backend unit tests passing (100% green)** across `test_health.py`, `test_auth.py`, and `test_caching_and_limits.py`.
+5. **Version Control**:
+   - Initialized Git repository and created root commit (`feat: complete Phase 1, 2, and 3`).
 
 ---
 
 ### Upcoming Tasks:
-- [ ] **Phase 3: Caching, Rate Limiting & Idempotency**:
-  - Redis integration for sliding-window rate limiting middleware.
-  - O(1) document-version cache invalidation strategy.
-  - Idempotency key tracking for mutative API operations.
+- [ ] **Phase 4: LLM Provider Abstraction & Prompts**:
+  - Define `LLMProvider` abstract protocol (`embed`, `generate`, `stream`).
+  - Implement `GeminiProvider` (Google Gemini API) and `OllamaProvider` (local Ollama).
+  - Create versioned prompt templates in code.
+  - Implement structured document summarizer with Pydantic validation.
