@@ -1,40 +1,48 @@
 # DocMind - Development Log
 
-## Status: Phase 5 (Document Ingestion & Core RAG Pipeline) COMPLETED ✅
+## Status: Phase 6 (AI Agents, Tools & Memory) COMPLETED ✅
 
 ---
 
-### [2026-11-13] - Milestone: Phase 5 - Document Ingestion, Overlapping Chunking, pgvector & Streaming Citations Completed
+### [2026-11-15] - Milestone: Phase 6 - AI Agents, Tools & Multi-Tier Memory Completed
 
 #### Completed:
-1. **Document Parsing & Chunking Engine**:
-   - `backend/app/services/document_parser.py`: Multi-format text extraction (`pypdf` for page-by-page PDF extraction, UTF-8 handler for Markdown/TXT). Implemented recursive character splitting with configurable chunk size and overlap (e.g. 1000 characters, 200 overlap), preserving exact `page` and sequential `chunk_index`.
-2. **Multi-Tenant Vector Repository Layer**:
-   - `backend/app/repositories/document_repo.py`:
-     - Multi-tenant CRUD operations strictly scoped to `user_id`.
-     - Fast bulk chunk insertion via `create_chunks_batch`.
-     - High-speed vector similarity search using `pgvector`'s `<=>` cosine distance operator against the HNSW index (`WHERE user_id = :uid`).
-3. **Background Ingestion & Caching State**:
-   - `backend/app/services/document_service.py`: Enforces max file size (10 MB), computes SHA-256 content hashes to detect and prevent duplicate uploads, writes to disk, and runs background text extraction, embedding generation, and DB insertion. Bumps `docs_version` in Redis upon completion for instant $O(1)$ query cache invalidation.
-4. **Streaming RAG & Citation Tracking Engine**:
-   - `backend/app/services/rag_service.py`:
-     - Checks Redis for cached queries under current `docs_version`.
-     - Embeds question and executes user-scoped `pgvector` similarity search.
-     - Enforces refusal guardrail if no relevant chunks are found.
-     - Assembles injection-resistant XML prompt (`<document_context>`).
-     - Streams real-time tokens via Server-Sent Events (SSE).
-     - Regex-parses verifiable citation markers (`[[doc:filename, page:X, chunk:Y]]`), persists turn to `messages` table in PostgreSQL as `JSONB`, and caches answer in Redis.
-5. **REST Endpoints for Documents & Conversations**:
-   - `backend/app/routers/documents.py`: `POST /documents` (supports `Idempotency-Key` and rate limiting), `GET /documents`, `GET /documents/{id}`, `DELETE /documents/{id}`, and `POST /documents/{id}/summary`.
-   - `backend/app/routers/chat.py`: `POST /conversations`, `GET /conversations`, `GET /conversations/{id}/messages`, and `POST /conversations/{id}/messages` (streaming SSE).
-6. **Automated Testing Suite**:
-   - `backend/tests/test_rag_pipeline.py`: Tested text extraction, overlapping chunking, citation parsing, duplicate upload prevention, explicit refusal on missing chunks, and full streaming SSE token delivery with citations.
-   - **All 27 backend unit tests passing (100% green)**.
+1. **Tool Registry & Extensible Tooling**:
+   - `backend/app/services/agent/tools.py`:
+     - `BaseTool` abstract base class with JSON Schema metadata for LLM ingestion.
+     - `CalculatorTool`: AST-parsed sandboxed mathematical evaluator supporting safe operators, trigonometric and log functions without `eval()` security vulnerabilities.
+     - `SearchDocumentsTool`: Exposes pgvector similarity search to the agent with automatic top-k clamping and citation formatting.
+     - `ToolRegistry`: In-memory registry enabling $O(1)$ tool lookup and dynamic schema generation for model prompts.
+2. **Bounded ReAct Agent Engine**:
+   - `backend/app/services/agent/agent_loop.py`:
+     - Iterative Reason + Act loop parsing `Thought:`, `Action:`, `Action Input:`, and `Final Answer:`.
+     - Strict execution step budgeting (`max_steps=5`) preventing runaway recursive tool-calling loops.
+     - Timeout guardrail (`step_timeout_seconds=30.0`) preventing API hangs.
+     - Graceful scratchpad synthesis fallback when max steps are reached.
+3. **Multi-Tier Memory Architecture**:
+   - `backend/app/repositories/memory_repo.py`:
+     - Short-term conversational message retrieval with multi-tenant verification (`conversation.user_id == user_id`).
+     - PostgreSQL upsert (`on_conflict_do_update`) and CRUD for `user_memories` table.
+   - `backend/app/services/agent/memory.py`:
+     - Short-term sliding window dialogue buffer formatting.
+     - Long-term user preferences injected under structured `<user_preferences>` XML delimiters.
+     - `assemble_agent_context` combining both tiers into prompt-ready context.
+4. **Automated Testing Suite**:
+   - `backend/tests/test_agent.py`: 35 comprehensive unit tests covering tool evaluation, injection defense, ReAct loop steps, timeout bounds, and memory context assembly.
+   - **All 62 backend unit tests passing (100% green)**.
 
 ---
 
 ### Upcoming Tasks:
-- [ ] **Phase 6: AI Agents, Tools & Memory**:
-  - ReAct agent loop with max execution steps and timeout bounds.
-  - Tool calling support: `search_documents`, `calculator`, `web_search`.
-  - Short-term sliding window memory + long-term user preferences in `user_memories`.
+- [ ] **Phase 7: Production AI & Evals**:
+  - Golden evaluation dataset (`backend/evals/golden_dataset.json`).
+  - Automated eval runner testing retrieval hit-rate ($\ge 80\%$), faithfulness, and refusal accuracy.
+  - Prompt injection attack testing.
+- [ ] **Phase 8: Frontend Chat & Document Management**:
+  - Document upload dropzone with upload progress.
+  - Streaming SSE chat UI with verifiable citation cards.
+  - Document summary modal.
+- [ ] **Phase 9: DevOps, CI/CD & Live Deployment**:
+  - Multi-stage Dockerfiles.
+  - GitHub Actions CI workflow.
+  - Live deployment to Railway/Render.
