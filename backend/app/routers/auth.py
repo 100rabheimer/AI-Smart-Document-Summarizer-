@@ -95,6 +95,41 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
 
 @router.post(
+    "/dev-login",
+    response_model=UserRead,
+    summary="Development Bypass Login",
+    description="Bypasses Google OAuth for local testing. Only available when ENVIRONMENT=development.",
+)
+async def dev_login(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    if settings.ENVIRONMENT != "development":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Dev login is only available in development environment."
+        )
+
+    user, raw_session_token = await AuthService.create_dev_session(
+        db=db,
+        user_agent=request.headers.get("user-agent"),
+        ip_address=request.client.host if request.client else None,
+    )
+
+    response.set_cookie(
+        key=SESSION_COOKIE_NAME,
+        value=raw_session_token,
+        max_age=SESSION_DURATION_DAYS * 86400,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        path="/",
+    )
+    return user
+
+
+@router.post(
     "/logout",
     summary="Log Out User",
     description="Revokes the active session in PostgreSQL and clears the session cookie.",

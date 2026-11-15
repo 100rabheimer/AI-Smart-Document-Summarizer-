@@ -212,7 +212,23 @@ export function App() {
     }
   }
 
-  // 9. Handle sign-out
+  // 9. Handle local Dev / Demo sign-in (bypasses Google OAuth for local development)
+  async function handleDevLogin() {
+    try {
+      const res = await fetch('/api/v1/auth/dev-login', { method: 'POST' });
+      if (res.ok) {
+        const userData = await res.json();
+        setUser(userData);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || 'Dev login failed.');
+      }
+    } catch (err) {
+      console.error('Failed to dev login', err);
+    }
+  }
+
+  // 10. Handle sign-out
   async function handleLogout() {
     try {
       await fetch('/api/v1/auth/logout', { method: 'POST' });
@@ -233,6 +249,7 @@ export function App() {
         user={user}
         onLogin={handleGoogleLogin}
         onLogout={handleLogout}
+        onDevLogin={handleDevLogin}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-6">
@@ -340,13 +357,22 @@ export function App() {
                 PostgreSQL <code className="text-indigo-400">pgvector</code> search, and strict multi-tenant isolation.
               </p>
 
-              <button
-                onClick={handleGoogleLogin}
-                className="flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition shadow-lg shadow-indigo-600/30 hover:scale-[1.02]"
-              >
-                <LogIn className="w-4 h-4" />
-                <span>Sign in with Google to Start</span>
-              </button>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <button
+                  onClick={handleDevLogin}
+                  className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm transition shadow-lg shadow-emerald-600/30 hover:scale-[1.02]"
+                >
+                  <Zap className="w-4 h-4" />
+                  <span>⚡ Quick Dev Sign In (Bypass Google)</span>
+                </button>
+                <button
+                  onClick={handleGoogleLogin}
+                  className="flex items-center gap-2.5 px-6 py-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-sm transition hover:scale-[1.02]"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Sign in with Google</span>
+                </button>
+              </div>
             </div>
 
             {/* Architecture Highlights */}

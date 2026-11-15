@@ -122,6 +122,41 @@ class AuthService:
         return user, raw_session_token
 
     @classmethod
+    async def create_dev_session(
+        cls,
+        db: AsyncSession,
+        email: str = "dev@docmind.local",
+        name: str = "Developer (Local)",
+        user_agent: Optional[str] = None,
+        ip_address: Optional[str] = None,
+    ) -> Tuple[User, str]:
+        """
+        Creates or retrieves a local developer user and returns a valid session token.
+        Only used in development environment to test without external Google OAuth credentials.
+        """
+        user = await UserRepository.upsert_user(
+            db=db,
+            email=email,
+            name=name,
+            avatar_url="https://api.dicebear.com/7.x/bottts/svg?seed=DocMind",
+        )
+
+        raw_session_token = secrets.token_urlsafe(32)
+        token_hash = cls.hash_token(raw_session_token)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_DURATION_DAYS)
+
+        await UserRepository.create_session(
+            db=db,
+            user_id=user.id,
+            session_token_hash=token_hash,
+            expires_at=expires_at,
+            user_agent=user_agent,
+            ip_address=ip_address,
+        )
+
+        return user, raw_session_token
+
+    @classmethod
     async def authenticate_session(
         cls,
         db: AsyncSession,

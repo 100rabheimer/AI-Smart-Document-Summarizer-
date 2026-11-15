@@ -1,6 +1,6 @@
 import React from 'react';
 import { HealthResponse, User } from '../types';
-import { Database, Server, Cpu, LogIn, LogOut } from 'lucide-react';
+import { Database, Server, Cpu, LogIn, LogOut, Terminal } from 'lucide-react';
 
 interface HeaderProps {
   health: HealthResponse | null;
@@ -8,6 +8,7 @@ interface HeaderProps {
   user: User | null;
   onLogin: () => void;
   onLogout: () => void;
+  onDevLogin?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   user,
   onLogin,
   onLogout,
+  onDevLogin,
 }) => {
   return (
     <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 py-4 flex items-center justify-between">
@@ -94,13 +96,25 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
         ) : (
-          <button
-            onClick={onLogin}
-            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-3.5 py-1.5 rounded-lg shadow-md shadow-indigo-600/30 transition text-xs"
-          >
-            <LogIn className="w-3.5 h-3.5" />
-            <span>Sign in with Google</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {onDevLogin && (
+              <button
+                onClick={onDevLogin}
+                className="flex items-center gap-1.5 bg-emerald-700/80 hover:bg-emerald-600 text-white font-medium px-3 py-1.5 rounded-lg shadow-sm transition text-xs border border-emerald-600/50"
+                title="Bypasses Google OAuth for local development & testing"
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                <span>Dev Login</span>
+              </button>
+            )}
+            <button
+              onClick={onLogin}
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-3.5 py-1.5 rounded-lg shadow-md shadow-indigo-600/30 transition text-xs"
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>Sign in with Google</span>
+            </button>
+          </div>
         )}
       </div>
     </header>
